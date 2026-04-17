@@ -488,31 +488,48 @@ async function runGitHubPagesDeploy({ pat, repoName, onLog }) {
       auto_init: true
     })
   });
-  if (!crRes.ok) {
+  if (crRes.ok) {
+    log('✓ Repo created');
+    // Let GitHub materialize the default branch before pushing.
+    await new Promise(r => setTimeout(r, 2500));
+  } else if (crRes.status === 422) {
+    // Repo already exists — continue to upload/update files.
+    log('↻ Repo already exists, will update files in place');
+  } else {
     const body = await crRes.text();
     throw new Error(`Create repo ${crRes.status}: ${body.slice(0, 180)}`);
   }
-  log('✓ Repo created');
-
-  // Let GitHub materialize the default branch before pushing.
-  await new Promise(r => setTimeout(r, 2500));
 
   for (let i = 0; i < DEPLOY_FILES.length; i++) {
     const path = DEPLOY_FILES[i];
-    log(`› ${i + 1}/${DEPLOY_FILES.length}: uploading ${path}…`);
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const contentsUrl = `https://api.github.com/repos/${username}/${repoName}/contents/${encodedPath}`;
+
+    // Check if the file already exists — if so, we must include its sha on PUT.
+    let existingSha = null;
+    const existRes = await fetch(`${contentsUrl}?ref=main`, { headers });
+    if (existRes.status === 200) {
+      const j = await existRes.json();
+      existingSha = j.sha;
+    } else if (existRes.status !== 404) {
+      const body = await existRes.text();
+      throw new Error(`Check ${path} ${existRes.status}: ${body.slice(0, 180)}`);
+    }
+
+    log(`› ${i + 1}/${DEPLOY_FILES.length}: ${existingSha ? 'updating' : 'uploading'} ${path}…`);
     const b64 = await fetchFileAsBase64(path);
-    const pRes = await fetch(
-      `https://api.github.com/repos/${username}/${repoName}/contents/${path.split('/').map(encodeURIComponent).join('/')}`,
-      {
-        method: 'PUT',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: `Add ${path}`,
-          content: b64,
-          branch: 'main'
-        })
-      }
-    );
+    const putBody = {
+      message: existingSha ? `Update ${path}` : `Add ${path}`,
+      content: b64,
+      branch: 'main'
+    };
+    if (existingSha) putBody.sha = existingSha;
+
+    const pRes = await fetch(contentsUrl, {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(putBody)
+    });
     if (!pRes.ok) {
       const body = await pRes.text();
       throw new Error(`Upload ${path} ${pRes.status}: ${body.slice(0, 180)}`);
