@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AFOQT Study</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="header">
+  <button class="brand" onclick="location.hash='#home'" aria-label="AFOQT Study — home">AFOQT Study</button>
+  <button class="icon-btn" onclick="location.hash='#settings'" aria-label="Settings">&#9881;</button>
+</header>
+
+<main id="app" class="container" aria-live="polite"></main>
+
+<div style="height: 80px"></div>
+
+<script src="data/vocab.js"></script>
+<script src="data/quotes.js"></script>
+<script src="data/drills.js"></script>
+<script src="data/roots.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
